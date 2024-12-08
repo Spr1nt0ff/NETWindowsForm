@@ -130,6 +130,22 @@ namespace MyTime
                     }
                 }
 
+                bool isDraw = true;
+                foreach (Button btn in buttons)
+                {
+                    if (btn.Image == null)
+                    {
+                        isDraw = false;
+                        break;
+                    }
+                }
+
+                if (isDraw)
+                {
+                    MessageBox.Show("Ничья!");
+                    return true;
+                }
+
             // Если нет победителя
             return false;
         }
