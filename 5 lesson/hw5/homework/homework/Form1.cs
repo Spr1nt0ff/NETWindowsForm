@@ -1,13 +1,13 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics;
-using static System.Net.Mime.MediaTypeNames;
-using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Windows.Forms;
 
-namespace homework {
+namespace homework
+{
     public partial class Form1 : Form
     {
-        private readonly Dictionary<string, double> _fuelPrices;
-        private readonly List<(TextBox Price, TextBox Quantity, double Total)> _menuItems;
+        Dictionary<string, double> _fuelPrices;
+        (CheckBox CheckBox, TextBox Quantity, TextBox Price, double PricePerUnit)[] _menuItems;
         private double _refuelingTotal;
         private double _coffeeTotal;
 
@@ -15,8 +15,8 @@ namespace homework {
         {
             InitializeComponent();
 
-            // Initialize dictionaries and collections
-            _fuelPrices = new Dictionary<string, double> {
+            _fuelPrices = new Dictionary<string, double>
+            {
                 {"92", 3.25},
                 {"95", 2.25},
                 {"95 Premium", 5.55},
@@ -24,11 +24,12 @@ namespace homework {
                 {"E85", 2.46}
             };
 
-            _menuItems = new List<(TextBox, TextBox, double)> {
-                (textBox7, textBox8, 0),
-                (textBox6, textBox9, 0),
-                (textBox4, textBox11, 0),
-                (textBox5, textBox10, 0)
+            _menuItems = new (CheckBox, TextBox, TextBox, double)[]
+            {
+                (checkBox1, textBox8, textBox7, 12.00),
+                (checkBox2, textBox9, textBox6, 15.00),
+                (checkBox3, textBox10, textBox5, 25.00),
+                (checkBox4, textBox11, textBox4, 30.00)
             };
 
             SetupTextBoxes();
@@ -42,10 +43,10 @@ namespace homework {
         private void SetupTextBoxes()
         {
             TextBox[] allTextBoxes = { textBox1, textBox2, textBox3, textBox8, textBox9, textBox10, textBox11 };
-            foreach (var textBox in allTextBoxes)
+            for (int i = 0; i < allTextBoxes.Length; i++)
             {
-                textBox.Enabled = false;
-                textBox.Text = "0";
+                allTextBoxes[i].Enabled = false;
+                allTextBoxes[i].Text = "0";
             }
 
             textBox1.Enabled = false;
@@ -53,20 +54,26 @@ namespace homework {
             textBox2.TextChanged += GasStationTextBoxChanged;
             textBox3.TextChanged += GasStationTextBoxChanged;
 
-            TextBox[] coffeeTextBoxes = { textBox8, textBox9, textBox10, textBox11 };
-            foreach (var coffeeBox in coffeeTextBoxes)
+            for (int i = 0; i < _menuItems.Length; i++)
             {
-                coffeeBox.EnabledChanged += CoffeeTextBoxChanged;
-                coffeeBox.TextChanged += CoffeeTextBoxChanged;
+                _menuItems[i].Quantity.TextChanged += (s, e) => CalculateCafeTotal();
+                _menuItems[i].Price.TextChanged += (s, e) => CalculateCafeTotal();
+                _menuItems[i].Price.Text = _menuItems[i].PricePerUnit.ToString("F2");
             }
         }
 
         private void SetupCheckBoxes()
         {
-            CheckBox[] coffeeCheckBoxes = { checkBox1, checkBox2, checkBox3, checkBox4 };
-            foreach (var checkBox in coffeeCheckBoxes)
+            for (int i = 0; i < _menuItems.Length; i++)
             {
-                checkBox.CheckedChanged += CoffeeCheckBoxChanged;
+                CheckBox checkBox = _menuItems[i].CheckBox;
+                TextBox quantity = _menuItems[i].Quantity;
+
+                checkBox.CheckedChanged += (s, e) =>
+                {
+                    quantity.Enabled = checkBox.Checked;
+                    CalculateCafeTotal();
+                };
             }
         }
 
@@ -84,22 +91,27 @@ namespace homework {
 
         private void CalculateRefuelingTotal()
         {
-            if (double.TryParse(textBox1.Text, out double price) && double.TryParse(textBox2.Text, out double quantity))
+            if (double.TryParse(textBox2.Text, out double quantity) && double.TryParse(textBox1.Text, out double price))
             {
                 _refuelingTotal = price * quantity;
                 label6.Text = $"{_refuelingTotal:F2} грн";
-                UpdateTotalSum();
             }
+            else
+            {
+                label6.Text = "0 грн";
+                _refuelingTotal = 0;
+            }
+            UpdateTotalSum();
         }
 
         private void CalculateCafeTotal()
         {
             _coffeeTotal = 0;
-            foreach (var (priceBox, quantityBox, _) in _menuItems)
+            foreach (var (checkBox, quantity, price, pricePerUnit) in _menuItems)
             {
-                if (priceBox.Enabled && double.TryParse(priceBox.Text, out double price) && double.TryParse(quantityBox.Text, out double quantity))
+                if (checkBox.Checked && double.TryParse(quantity.Text, out double quantityValue))
                 {
-                    _coffeeTotal += price * quantity;
+                    _coffeeTotal += pricePerUnit * quantityValue;
                 }
             }
             label9.Text = $"{_coffeeTotal:F2} грн";
@@ -111,35 +123,12 @@ namespace homework {
             CalculateRefuelingTotal();
         }
 
-        private void CoffeeTextBoxChanged(object sender, EventArgs e)
-        {
-            CalculateCafeTotal();
-        }
-
-        private void CoffeeCheckBoxChanged(object sender, EventArgs e)
-        {
-            CheckBox[] coffeeCheckBoxes = { checkBox1, checkBox2, checkBox3, checkBox4 };
-            TextBox[] coffeeTextBoxes = { textBox8, textBox9, textBox10, textBox11 };
-
-            for (int i = 0; i < coffeeCheckBoxes.Length; i++)
-            {
-                coffeeTextBoxes[i].Enabled = coffeeCheckBoxes[i].Checked;
-            }
-        }
-
         private void RadioButtonChanged(object sender, EventArgs e)
         {
             textBox2.Enabled = radioButton1.Checked;
             textBox3.Enabled = radioButton2.Checked;
 
-            if (radioButton1.Checked)
-            {
-                CalculateRefuelingTotal();
-            }
-            else
-            {
-                CalculateRefuelingTotal();
-            }
+            CalculateRefuelingTotal();
         }
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
@@ -150,5 +139,7 @@ namespace homework {
                 CalculateRefuelingTotal();
             }
         }
+
+
     }
 }
